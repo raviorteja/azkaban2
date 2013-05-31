@@ -1249,7 +1249,7 @@ public class ProjectManagerServlet extends LoginAbstractAzkabanServlet {
 			String type = null;
 			
 			final String contentType = item.getContentType();
-			if(contentType != null && (contentType.startsWith("application/zip") || contentType.startsWith("application/x-zip-compressed"))) {
+			if(contentType != null && (contentType.startsWith("application/x-zip") || contentType.startsWith("application/zip") || contentType.startsWith("application/x-zip-compressed"))) {
 				type = "zip";
 			}
 			else {
