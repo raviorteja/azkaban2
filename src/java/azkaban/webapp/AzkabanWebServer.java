@@ -520,6 +520,7 @@ public class AzkabanWebServer extends AzkabanServer {
 			boolean pluginHidden = pluginProps.getBoolean("viewer.hidden", false);
 			List<String> extLibClasspath = pluginProps.getStringList("viewer.external.classpaths", (List<String>)null);
 			
+			logger.info("ext clasapth: " + extLibClasspath);
 			String pluginClass = pluginProps.getString("viewer.servlet.class");
 			if (pluginClass == null) {
 				logger.error("Viewer class is not set.");
@@ -548,6 +549,7 @@ public class AzkabanWebServer extends AzkabanServer {
 							File file = new File(pluginDir, extLib);
 							URL url = file.toURI().toURL();
 							urls.add(url);
+							logger.info("loading: " + url);
 						} catch (MalformedURLException e) {
 							logger.error(e);
 						}
