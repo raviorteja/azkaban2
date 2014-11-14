@@ -1,20 +1,5 @@
 package azkaban.execapp;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
-import org.apache.log4j.Logger;
-import org.codehaus.jackson.map.ObjectMapper;
-
 import azkaban.executor.ConnectorParams;
 import azkaban.executor.ExecutableFlow;
 import azkaban.executor.ExecutorManagerException;
@@ -22,6 +7,19 @@ import azkaban.utils.FileIOUtils.JobMetaData;
 import azkaban.utils.FileIOUtils.LogData;
 import azkaban.utils.JSONUtils;
 import azkaban.webapp.servlet.AzkabanServletContextListener;
+import org.apache.log4j.Logger;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ExecutorServlet extends HttpServlet implements ConnectorParams {
 	private static final long serialVersionUID = 1L;
@@ -204,7 +202,34 @@ public class ExecutorServlet extends HttpServlet implements ConnectorParams {
 		}
 
 	}
-	
+
+	@SuppressWarnings("unchecked")
+	private void handleAjaxUpdatePostRequest(HttpServletRequest req, Map<String, Object> respMap) throws ServletException, IOException {
+		ArrayList<Object> updateTimesList = (ArrayList<Object>)JSONUtils.parseJSONFromString(getAttribute(req, UPDATE_TIME_LIST_PARAM).toString());
+		ArrayList<Object> execIDList = (ArrayList<Object>)JSONUtils.parseJSONFromString(getAttribute(req, EXEC_ID_LIST_PARAM).toString());
+
+		ArrayList<Object> updateList = new ArrayList<Object>();
+		for (int i = 0; i < execIDList.size(); ++i) {
+			long updateTime = JSONUtils.getLongFromObject(updateTimesList.get(i));
+			int execId = (Integer)execIDList.get(i);
+
+			ExecutableFlow flow = flowRunnerManager.getExecutableFlow(execId);
+			if (flow == null) {
+				Map<String, Object> errorResponse = new HashMap<String,Object>();
+				errorResponse.put(RESPONSE_ERROR, "Flow does not exist");
+				errorResponse.put(UPDATE_MAP_EXEC_ID, execId);
+				updateList.add(errorResponse);
+				continue;
+			}
+
+			if (flow.getUpdateTime() > updateTime) {
+				updateList.add(flow.toUpdateObject(updateTime));
+			}
+		}
+
+		respMap.put(RESPONSE_UPDATED_FLOWS, updateList);
+	}
+
 	@SuppressWarnings("unchecked")
 	private void handleAjaxUpdateRequest(HttpServletRequest req, Map<String, Object> respMap) throws ServletException, IOException {
 		ArrayList<Object> updateTimesList = (ArrayList<Object>)JSONUtils.parseJSONFromString(getParam(req, UPDATE_TIME_LIST_PARAM));
@@ -300,7 +325,67 @@ public class ExecutorServlet extends HttpServlet implements ConnectorParams {
 	
 	@Override
 	public void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-		
+		HashMap<String,Object> respMap= new HashMap<String,Object>();
+		//logger.info("ExecutorServer called by " + req.getRemoteAddr());
+		try {
+			if (!hasParam(req, ACTION_PARAM)) {
+				logger.error("Parameter action not set");
+				respMap.put("error", "Parameter action not set");
+			}
+			else {
+				String action = getParam(req, ACTION_PARAM);
+				if (action.equals(UPDATE_ACTION)) {
+					//logger.info("Updated called");
+					handleAjaxUpdatePostRequest(req, respMap);
+				}
+				else if (action.equals(PING_ACTION)) {
+					respMap.put("status", "alive");
+				}
+				else {
+					int execid = Integer.parseInt(getParam(req, EXECID_PARAM));
+					String user = getParam(req, USER_PARAM, null);
+
+					logger.info("User " + user + " has called action " + action + " on " + execid);
+					if (action.equals(METADATA_ACTION)) {
+						handleFetchMetaDataEvent(execid, req, resp, respMap);
+					}
+					else if (action.equals(LOG_ACTION)) {
+						handleFetchLogEvent(execid, req, resp, respMap);
+					}
+					else if (action.equals(EXECUTE_ACTION)) {
+						handleAjaxExecute(req, respMap, execid);
+					}
+					else if (action.equals(STATUS_ACTION)) {
+						handleAjaxFlowStatus(respMap, execid);
+					}
+					else if (action.equals(CANCEL_ACTION)) {
+						logger.info("Cancel called.");
+						handleAjaxCancel(respMap, execid, user);
+					}
+					else if (action.equals(PAUSE_ACTION)) {
+						logger.info("Paused called.");
+						handleAjaxPause(respMap, execid, user);
+					}
+					else if (action.equals(RESUME_ACTION)) {
+						logger.info("Resume called.");
+						handleAjaxResume(respMap, execid, user);
+					}
+					else if (action.equals(MODIFY_EXECUTION_ACTION)) {
+						logger.info("Modify Execution Action");
+						handleModifyExecutionRequest(respMap, execid, user, req);
+					}
+					else {
+						logger.error("action: '" + action + "' not supported.");
+						respMap.put("error", "action: '" + action + "' not supported.");
+					}
+				}
+			}
+		} catch (Exception e) {
+			logger.error(e);
+			respMap.put(RESPONSE_ERROR, e.getMessage());
+		}
+		writeJSON(resp, respMap);
+		resp.flushBuffer();
 	}
 	
 	/**
@@ -313,6 +398,14 @@ public class ExecutorServlet extends HttpServlet implements ConnectorParams {
 	public String getParam(HttpServletRequest request, String name)
 			throws ServletException {
 		String p = request.getParameter(name);
+		if (p == null)
+			throw new ServletException("Missing required parameter '" + name + "'.");
+		else
+			return p;
+	}
+	public Object getAttribute(HttpServletRequest request, String name)
+			throws ServletException {
+		Object p = request.getAttribute(name);
 		if (p == null)
 			throw new ServletException("Missing required parameter '" + name + "'.");
 		else
