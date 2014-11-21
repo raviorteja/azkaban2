@@ -30,7 +30,9 @@ import javax.management.ObjectName;
 
 import org.apache.log4j.Logger;
 import org.joda.time.DateTimeZone;
+import org.mortbay.jetty.Connector;
 import org.mortbay.jetty.Server;
+import org.mortbay.jetty.bio.SocketConnector;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.mortbay.thread.QueuedThreadPool;
@@ -86,6 +88,14 @@ public class AzkabanExecutorServer {
 		server = new Server(portNumber);
 		QueuedThreadPool httpThreadPool = new QueuedThreadPool(maxThreads);
 		server.setThreadPool(httpThreadPool);
+		//server.getConnectors().
+		for (Connector connector : server.getConnectors()) {
+			if (connector instanceof SocketConnector) {
+				connector.setRequestBufferSize(20576);
+				connector.setResponseBufferSize(20576);
+				connector.setHeaderBufferSize(20576);
+			}
+		}
 
 		Context root = new Context(server, "/", Context.SESSIONS);
 		root.setMaxFormContentSize(MAX_FORM_CONTENT_SIZE);
