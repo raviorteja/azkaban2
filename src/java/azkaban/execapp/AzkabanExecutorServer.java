@@ -16,25 +16,6 @@
 
 package azkaban.execapp;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.management.ManagementFactory;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.TimeZone;
-
-import javax.management.MBeanInfo;
-import javax.management.MBeanServer;
-import javax.management.ObjectName;
-
-import org.apache.log4j.Logger;
-import org.joda.time.DateTimeZone;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.ServletHolder;
-import org.mortbay.thread.QueuedThreadPool;
-
 import azkaban.executor.ExecutorLoader;
 import azkaban.executor.JdbcExecutorLoader;
 import azkaban.jmx.JmxFlowRunnerManager;
@@ -45,11 +26,31 @@ import azkaban.utils.Props;
 import azkaban.utils.Utils;
 import azkaban.webapp.AzkabanServer;
 import azkaban.webapp.servlet.AzkabanServletContextListener;
+import org.apache.log4j.Logger;
+import org.joda.time.DateTimeZone;
+import org.mortbay.jetty.Connector;
+import org.mortbay.jetty.Server;
+import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.ServletHolder;
+import org.mortbay.thread.QueuedThreadPool;
+
+import javax.management.MBeanInfo;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.TimeZone;
 
 public class AzkabanExecutorServer {
 	private static final Logger logger = Logger.getLogger(AzkabanExecutorServer.class);
 	private static final int MAX_FORM_CONTENT_SIZE = 10*1024*1024;
-
+	private static final int MAX_HEADER_BUFFER_SIZE = 10 * 1024 * 1024;
+	private static final int MAX_RESPONSE_BUFFER_SIZE = 256 * 1024;
+	private static final int MAX_REQUEST_BUFFER_SIZE = 256 * 1024;
 	public static final String AZKABAN_HOME = "AZKABAN_HOME";
 	public static final String DEFAULT_CONF_PATH = "conf";
 	public static final String AZKABAN_PROPERTIES_FILE = "azkaban.properties";
@@ -86,6 +87,12 @@ public class AzkabanExecutorServer {
 		server = new Server(portNumber);
 		QueuedThreadPool httpThreadPool = new QueuedThreadPool(maxThreads);
 		server.setThreadPool(httpThreadPool);
+
+		for (Connector connector : server.getConnectors()) {
+			      connector.setHeaderBufferSize(MAX_HEADER_BUFFER_SIZE);
+			      connector.setResponseBufferSize(MAX_RESPONSE_BUFFER_SIZE);
+			      connector.setRequestBufferSize(MAX_REQUEST_BUFFER_SIZE);
+		}
 
 		Context root = new Context(server, "/", Context.SESSIONS);
 		root.setMaxFormContentSize(MAX_FORM_CONTENT_SIZE);
