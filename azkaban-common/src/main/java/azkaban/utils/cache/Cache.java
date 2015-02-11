@@ -22,7 +22,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Cache {
   private long nextUpdateTime = 0;
-  private long updateFrequency = 1 * 60 * 1000;
+  private long updateFrequency = 30 * 60 * 1000;
   private int maxCacheSize = -1;
 
   private long expireTimeToLive = -1; // Never expires
