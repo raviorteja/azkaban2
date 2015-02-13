@@ -1,0 +1,9 @@
+ALTER TABLE execution_flows MODIFY flow_id VARCHAR(512);
+ALTER TABLE execution_jobs MODIFY flow_id VARCHAR(512);
+ALTER TABLE execution_jobs MODIFY job_id VARCHAR(512);
+ALTER TABLE execution_logs MODIFY name VARCHAR(512);
+ALTER TABLE project_flows MODIFY flow_id VARCHAR(512);
+ALTER TABLE project_properties MODIFY name VARCHAR(512);
+ALTER TABLE projects MODIFY name VARCHAR(512);
+ALTER TABLE schedules MODIFY project_name VARCHAR(512);
+ALTER TABLE schedules MODIFY flow_name VARCHAR(512);
