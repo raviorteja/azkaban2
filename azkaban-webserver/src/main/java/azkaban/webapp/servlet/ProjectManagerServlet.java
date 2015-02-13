@@ -1557,7 +1557,8 @@ public class ProjectManagerServlet extends LoginAbstractAzkabanServlet {
 
       final String contentType = item.getContentType();
       if (contentType != null
-          && ( contentType.startsWith("application/x-zip") || contentType.startsWith(APPLICATION_ZIP_MIME_TYPE)
+          && ( contentType.startsWith("application/x-download") || contentType.startsWith("application/x-zip") || contentType.startsWith
+              (APPLICATION_ZIP_MIME_TYPE)
               || contentType.startsWith("application/x-zip-compressed") || contentType
                 .startsWith("application/octet-stream"))) {
         type = "zip";
