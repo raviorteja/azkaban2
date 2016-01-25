@@ -93,6 +93,7 @@ public class AzkabanProcess {
 		}
 
 		completeLatch.countDown();
+		logger.debug("Exit code for the process is: "+exitCode);
 		if (exitCode != 0) {
 			throw new ProcessFailureException(exitCode, errorGobbler.getRecentLog());
 		}
